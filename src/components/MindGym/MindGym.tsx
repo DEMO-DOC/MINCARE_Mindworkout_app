@@ -146,7 +146,75 @@ export function MindGym() {
           </button>
         ))}
       </div>
+      useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
 
+    if (isActive && seconds > 0) {
+      interval = setInterval(() => {
+        setSeconds((s) => s - 1);
+      }, 1000);
+    } else if (seconds === 0) {
+      setIsActive(false);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isActive, seconds]);
+
+  const toggle = () => {
+    setIsActive(!isActive);
+    console.log(isActive ? "Timer paused" : "Timer started");
+  };
+
+  const reset = () => {
+    setSeconds(300);
+    setIsActive(false);
+    console.log("Timer reset");
+  };
+
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  const progress = ((totalSeconds - seconds) / totalSeconds) * 100;
+
+  return (
+    <Card className="p-8">
+      <h2 className="text-xl font-semibold mb-6 text-center" data-testid="text-timer-title">
+        Breathing Exercise
+      </h2>
+      
+      <div className="flex flex-col items-center space-y-6">
+        <div className="relative w-48 h-48">
+          <svg className="w-full h-full transform -rotate-90">
+            <circle
+              cx="96"
+              cy="96"
+              r="88"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="none"
+              className="text-muted"
+            />
+            <circle
+              cx="96"
+              cy="96"
+              r="88"
+              stroke="currentColor"
+              strokeWidth="8"
+              fill="none"
+              strokeDasharray={`${2 * Math.PI * 88}`}
+              strokeDashoffset={`${2 * Math.PI * 88 * (1 - progress / 100)}`}
+              className="text-primary transition-all duration-1000"
+              strokeLinecap="round"
+            />
+          </svg>
+          
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-5xl font-semibold tabular-nums" data-testid="text-timer-display">
+              {minutes}:{remainingSeconds.toString().padStart(2, "0")}
+            </span>
+          </div>
+        </div>
       <div className="grid gap-4">
         {loading ? (
           <div className="text-center py-12 text-gray-500">Loading exercises...</div>
@@ -169,6 +237,7 @@ export function MindGym() {
                     <span className="capitalize">{exercise.type}</span>
                     <span>•</span>
                     <span>{Math.floor(exercise.duration_seconds / 60)} min</span>
+                    
                     <span>•</span>
                     <span>Level {exercise.difficulty_level}</span>
                   </div>
