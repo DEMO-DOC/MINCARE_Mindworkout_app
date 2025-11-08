@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { Brain, Flame, Trophy, Play, Check } from 'lucide-react';
-import { Card } from '@/components/ui/card'; // ✅ assuming you’re using shadcn/ui
+import { Card } from '@/components/ui/card';
 
 interface Exercise {
   id: string;
@@ -23,11 +23,16 @@ interface UserProgress {
 export function MindGym() {
   const { user } = useAuth();
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [progress, setProgress] = useState<UserProgress>({ streak_count: 0, fitness_level: 1, total_completed: 0 });
+  const [progress, setProgress] = useState<UserProgress>({
+    streak_count: 0,
+    fitness_level: 1,
+    total_completed: 0,
+  });
   const [selectedType, setSelectedType] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [activeExercise, setActiveExercise] = useState<Exercise | null>(null);
 
+  // Load data
   useEffect(() => {
     if (user) {
       loadExercises();
@@ -80,7 +85,7 @@ export function MindGym() {
       total_completed: progress.total_completed + 1,
     });
 
-    setActiveExercise(null); // close the exercise view
+    setActiveExercise(null); // return to list
   };
 
   const filteredExercises =
@@ -96,8 +101,14 @@ export function MindGym() {
     { value: 'challenge', label: 'Challenge', icon: Trophy },
   ];
 
-  // ✅ Breathing Timer Component
-  const BreathingTimer = ({ duration, onComplete }: { duration: number; onComplete: () => void }) => {
+  // 🧘‍♂️ Breathing Timer Component
+  const BreathingTimer = ({
+    duration,
+    onComplete,
+  }: {
+    duration: number;
+    onComplete: () => void;
+  }) => {
     const [seconds, setSeconds] = useState(duration);
     const [isActive, setIsActive] = useState(false);
     const totalSeconds = duration;
@@ -109,7 +120,9 @@ export function MindGym() {
         interval = setInterval(() => {
           setSeconds((s) => s - 1);
         }, 1000);
-      } else if (seconds === 0) {
+      }
+
+      if (seconds === 0 && isActive) {
         setIsActive(false);
         onComplete();
       }
@@ -117,7 +130,7 @@ export function MindGym() {
       return () => {
         if (interval) clearInterval(interval);
       };
-    }, [isActive, seconds]);
+    }, [isActive]); // only depends on isActive, not seconds
 
     const toggle = () => {
       setIsActive(!isActive);
@@ -136,6 +149,13 @@ export function MindGym() {
 
     return (
       <Card className="p-8 mt-6 text-center">
+        <button
+          onClick={() => setActiveExercise(null)}
+          className="mb-4 text-blue-600 hover:underline text-sm"
+        >
+          ← Back to Exercises
+        </button>
+
         <h2 className="text-xl font-semibold mb-6" data-testid="text-timer-title">
           Breathing Exercise
         </h2>
@@ -156,18 +176,21 @@ export function MindGym() {
                 cx="96"
                 cy="96"
                 r="88"
-                stroke="currentColor"
+                stroke={`hsl(${progress * 1.2}, 80%, 50%)`}
                 strokeWidth="8"
                 fill="none"
                 strokeDasharray={`${2 * Math.PI * 88}`}
                 strokeDashoffset={`${2 * Math.PI * 88 * (1 - progress / 100)}`}
-                className="text-primary transition-all duration-1000"
+                className="transition-all duration-1000"
                 strokeLinecap="round"
               />
             </svg>
 
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-5xl font-semibold tabular-nums" data-testid="text-timer-display">
+              <span
+                className="text-5xl font-semibold tabular-nums"
+                data-testid="text-timer-display"
+              >
                 {minutes}:{remainingSeconds.toString().padStart(2, '0')}
               </span>
             </div>
@@ -176,13 +199,13 @@ export function MindGym() {
           <div className="flex gap-4">
             <button
               onClick={toggle}
-              className="px-6 py-2 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600"
+              className="px-6 py-2 bg-blue-500 text-white rounded-xl font-medium hover:bg-blue-600 transition-all"
             >
               {isActive ? 'Pause' : 'Start'}
             </button>
             <button
               onClick={reset}
-              className="px-6 py-2 bg-gray-200 rounded-xl font-medium hover:bg-gray-300"
+              className="px-6 py-2 bg-gray-200 rounded-xl font-medium hover:bg-gray-300 transition-all"
             >
               Reset
             </button>
@@ -192,6 +215,7 @@ export function MindGym() {
     );
   };
 
+  // 🧠 Render Section
   return (
     <div className="space-y-6">
       {/* --- Header / Stats --- */}
@@ -251,21 +275,63 @@ export function MindGym() {
       {/* --- Exercise List or Active Exercise --- */}
       <div className="grid gap-4">
         {activeExercise ? (
-          <BreathingTimer
-            duration={activeExercise.duration_seconds}
-            onComplete={() => completeExercise(activeExercise.id, Math.floor(Math.random() * 40) + 60)}
-          />
+          activeExercise.type === 'breathing' ? (
+            <BreathingTimer
+              duration={activeExercise.duration_seconds}
+              onComplete={() =>
+                completeExercise(
+                  activeExercise.id,
+                  Math.floor(Math.random() * 40) + 60
+                )
+              }
+            />
+          ) : (
+            <Card className="p-8 text-center">
+              <button
+                onClick={() => setActiveExercise(null)}
+                className="mb-4 text-blue-600 hover:underline text-sm"
+              >
+                ← Back to Exercises
+              </button>
+              <h2 className="text-xl font-semibold mb-4">
+                {activeExercise.name}
+              </h2>
+              <p className="text-gray-600 mb-6">
+                This exercise type doesn’t have an interactive timer yet.
+              </p>
+              <button
+                onClick={() =>
+                  completeExercise(
+                    activeExercise.id,
+                    Math.floor(Math.random() * 40) + 60
+                  )
+                }
+                className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white py-3 px-6 rounded-lg font-medium hover:from-blue-600 hover:to-cyan-600 transition-all shadow-md hover:shadow-lg"
+              >
+                Mark as Complete
+              </button>
+            </Card>
+          )
         ) : loading ? (
-          <div className="text-center py-12 text-gray-500">Loading exercises...</div>
+          <div className="text-center py-12 text-gray-500">
+            Loading exercises...
+          </div>
         ) : filteredExercises.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">No exercises found</div>
+          <div className="text-center py-12 text-gray-500">
+            No exercises found
+          </div>
         ) : (
           filteredExercises.map((exercise) => (
-            <div key={exercise.id} className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all">
+            <div
+              key={exercise.id}
+              className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-all"
+            >
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-bold text-gray-900">{exercise.name}</h3>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {exercise.name}
+                    </h3>
                     {exercise.premium_only && (
                       <span className="px-2 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-bold rounded-full">
                         PREMIUM
@@ -275,14 +341,19 @@ export function MindGym() {
                   <div className="flex items-center gap-3 text-sm text-gray-600">
                     <span className="capitalize">{exercise.type}</span>
                     <span>•</span>
-                    <span>{Math.floor(exercise.duration_seconds / 60)} min</span>
+                    <span>
+                      {Math.floor(exercise.duration_seconds / 60)} min
+                    </span>
                     <span>•</span>
                     <span>Level {exercise.difficulty_level}</span>
                   </div>
                 </div>
                 <div className="flex gap-1">
                   {[...Array(exercise.difficulty_level)].map((_, i) => (
-                    <div key={i} className="w-2 h-8 bg-gradient-to-t from-blue-500 to-cyan-500 rounded-full" />
+                    <div
+                      key={i}
+                      className="w-2 h-8 bg-gradient-to-t from-blue-500 to-cyan-500 rounded-full"
+                    />
                   ))}
                 </div>
               </div>
